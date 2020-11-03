@@ -2,29 +2,33 @@ const Post = require("../../models/Post");
 const HttpError = require("../../models/http-error");
 const checkAuth = require("../../util/check-auth");
 const { AuthenticationError, UserInputError } = require("apollo-server");
+const comments = require("./comments");
+const { updatePosts } = require("../../util/update-posts");
 
 module.exports = {
   Query: {
     async getPosts() {
       try {
         const posts = await Post.find()
-          .populate("comments.userId")
-          .populate("likes.userId")
+          .populate("comments.userId", "id firstname lastname")
+          .populate("likes.userId", "id firstname lastname")
           .sort({ createdAt: -1 })
-          .exec((err, res) => {
-            console.log(res);
-            return res;
-          });
-        return posts;
+          .exec();
+
+        return updatePosts(posts);
       } catch (err) {
         throw new Error(err);
       }
     },
+
     async getPost(_, { postId }) {
       try {
-        const post = await Post.findById(postId);
+        const post = await Post.findById(postId)
+          .populate("comments.userId", "id firstname lastname")
+          .populate("likes.userId", "id firstname lastname")
+          .exec();
         if (post) {
-          return post;
+          return updatePost(post);
         } else {
           throw new Error("Post not found");
         }
@@ -34,10 +38,13 @@ module.exports = {
     },
   },
   Mutation: {
-    async createPost(_, { body, type, image }, context) {
+    async createPost(_, { type, body, image }, context) {
       const user = checkAuth(context);
 
-      if (body.trim() === "") {
+      if (
+        (type === "TEXT" && body.trim() === "") ||
+        (type === "IMAGE" && !image)
+      ) {
         throw new UserInputError("Post cannot be empty");
       }
 
@@ -80,24 +87,28 @@ module.exports = {
     async likePost(_, { postId }, context) {
       const { id } = checkAuth(context);
 
-      const post = await Post.findById(postId);
-      if (post) {
-        if (post.likes.find((like) => like.username === username)) {
-          //Post already liked, to unlike
-          post.likes = post.likes.filter((like) => like.username !== username);
-        } else {
-          //Not liked
-          post.likes.push({
-            userId: id,
-            createdAt: new Date().toISOString(),
-          });
-        }
+      const post = await Post.findById(postId)
+        .populate("comments.userId", "id firstname lastname")
+        .populate("likes.userId", "id firstname lastname")
+        .exec();
 
-        await post.save();
-        return post;
-      } else {
+      if (!post) {
         throw new UserInputError("Post not found");
       }
+
+      if (post.likes.find((like) => like.userId === id)) {
+        //Post already liked, to unlike
+        post.likes = post.likes.filter((like) => like.userId !== id);
+      } else {
+        //Not liked
+        post.likes.push({
+          userId: id,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      await post.save();
+      return updatePost(post);
     },
   },
   Subscription: {

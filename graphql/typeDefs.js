@@ -10,6 +10,8 @@ module.exports = gql`
     likes: [Like]!
     likeCount: Int!
     commentCount: Int!
+    type: PostType!
+    image: String
   }
 
   type Comment {
@@ -17,12 +19,11 @@ module.exports = gql`
     createdAt: String!
     userId: ID!
     body: String!
-    type: CommentType!
     firstname: String
     lastname: String
   }
 
-  enum CommentType {
+  enum PostType {
     TEXT
     IMAGE
   }
@@ -65,7 +66,7 @@ module.exports = gql`
     register(registerInput: RegisterInput): User!
     login(username: String!, password: String!): User!
     validateToken: User!
-    createPost(body: String!): Post!
+    createPost(type: PostType!, body: String, image: Upload): Post!
     deletePost(postId: ID!): String!
     createComment(postId: ID!, body: String!): Post!
     deleteComment(postId: ID!, commentId: ID!): Post!

@@ -20,7 +20,7 @@ module.exports = {
       if (post) {
         post.comments.unshift({
           body,
-          id,
+          userId: id,
           createdAt: new Date().toISOString(),
         });
 
