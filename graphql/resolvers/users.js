@@ -15,10 +15,6 @@ const generateToken = (user) =>
   jwt.sign(
     {
       id: user.id,
-      email: user.email,
-      username: user.username,
-      firstname: user.firstname,
-      lastname: user.lastname,
     },
     SECRET_KEY,
     { expiresIn: "1h" }
@@ -33,7 +29,7 @@ module.exports = {
         throw new UserInputError("Errors", { errors });
       }
 
-      const user = await User.findOne({ username });
+      const user = await User.findOne({ username }).exec();
 
       if (!user) {
         errors.general = "User not found";
@@ -67,9 +63,7 @@ module.exports = {
           confirmPassword,
           image,
         },
-      },
-      context,
-      info
+      }
     ) {
       const { valid, errors } = validateRegisterInput(
         username,
@@ -85,7 +79,7 @@ module.exports = {
         throw new UserInputError("Errors", { errors });
       }
 
-      const user = await User.findOne({ username });
+      const user = await User.findOne({ username }).exec();
 
       if (user) {
         throw new UserInputError("Username is taken", {
@@ -117,17 +111,25 @@ module.exports = {
         image: imageKey,
       });
 
-      const res = await newUser.save();
-
-      const token = generateToken(res);
+      try {
+        await newUser.save();
+      } catch (err) {
+        throw new Error(err);
+      }
+      const token = generateToken(newUser);
 
       return {
-        ...res._doc,
-        id: res._id,
+        email: newUser.email,
+        firstname: newUser.firstname,
+        lastname: newUser.lastname,
+        username: newUser.username,
+        createdAt: newUser.createdAt,
+        image: newUser.image,
+        id: newUser.id,
         token,
       };
     },
-    async validateToken(parent, body, context, info) {
+    async validateToken(parent, body, context) {
       const user = checkAuth(context);
 
       const returnedUser = await User.findById(user.id).exec();

@@ -6,6 +6,9 @@ module.exports = gql`
     body: String!
     createdAt: String!
     userId: ID!
+    firstname: String!
+    lastname: String!
+    userImage: String!
     comments: [Comment]!
     likes: [Like]!
     likeCount: Int!
@@ -67,7 +70,7 @@ module.exports = gql`
     login(username: String!, password: String!): User!
     validateToken: User!
     createPost(type: PostType!, body: String, image: Upload): Post!
-    deletePost(postId: ID!): String!
+    deletePost(postId: ID!): ID!
     createComment(postId: ID!, body: String!): Post!
     deleteComment(postId: ID!, commentId: ID!): Post!
     likePost(postId: ID!): Post!

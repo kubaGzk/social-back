@@ -7,14 +7,7 @@ const {
 const { v4: uuid } = require("uuid");
 const aws = require("aws-sdk");
 
-const fileUpload = async (file) => {
-  const { createReadStream, filename, mimetype } = await file;
-  const stream = createReadStream();
-  const fileKey = await s3upload(stream);
-  return fileKey;
-};
-
-const s3upload = async (stream) => {
+const s3upload = (stream) => {
   aws.config.setPromisesDependency();
 
   aws.config.update({
@@ -25,6 +18,7 @@ const s3upload = async (stream) => {
 
   const s3 = new aws.S3();
 
+  //eslint-disable-next-line global-require
   const s3Stream = require("s3-upload-stream")(s3);
 
   const fileKey = uuid();
@@ -41,8 +35,7 @@ const s3upload = async (stream) => {
   return new Promise((resolve, reject) => {
     stream
       .pipe(upload)
-      .on("part", (details) => {})
-      .on("uploaded", (resp) => {
+      .on("uploaded", () => {
         resolve(fileKey);
       })
       .on("error", (err) => {
@@ -50,6 +43,13 @@ const s3upload = async (stream) => {
         reject(err);
       });
   });
+};
+
+const fileUpload = async (file) => {
+  const { createReadStream } = await file;
+  const stream = createReadStream();
+  const fileKey = await s3upload(stream);
+  return fileKey;
 };
 
 module.exports = fileUpload;

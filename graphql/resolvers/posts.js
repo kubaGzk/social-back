@@ -1,80 +1,102 @@
 const Post = require("../../models/Post");
-const HttpError = require("../../models/http-error");
 const checkAuth = require("../../util/check-auth");
 const { AuthenticationError, UserInputError } = require("apollo-server");
-const comments = require("./comments");
-const { updatePosts } = require("../../util/update-posts");
+const uploadFile = require("../../util/upload-file");
 
 module.exports = {
   Query: {
     async getPosts() {
+      let posts;
+
       try {
-        const posts = await Post.find()
+        posts = await Post.find()
+          .populate("userId", "id firstname lastname image")
           .populate("comments.userId", "id firstname lastname")
           .populate("likes.userId", "id firstname lastname")
           .sort({ createdAt: -1 })
           .exec();
-
-        return updatePosts(posts);
       } catch (err) {
         throw new Error(err);
       }
+      return posts;
     },
 
     async getPost(_, { postId }) {
+      let post;
       try {
-        const post = await Post.findById(postId)
+        post = await Post.findById(postId)
+          .populate("userId", "id firstname lastname image")
           .populate("comments.userId", "id firstname lastname")
           .populate("likes.userId", "id firstname lastname")
           .exec();
-        if (post) {
-          return updatePost(post);
-        } else {
-          throw new Error("Post not found");
-        }
       } catch (err) {
         throw new Error(err);
       }
+
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      return post;
     },
   },
   Mutation: {
     async createPost(_, { type, body, image }, context) {
-      const user = checkAuth(context);
+      const { id } = checkAuth(context);
+
+      let postBody = "";
+      if (body) {
+        postBody = body;
+      }
 
       if (
-        (type === "TEXT" && body.trim() === "") ||
+        (type === "TEXT" && postBody.trim() === "") ||
         (type === "IMAGE" && !image)
       ) {
         throw new UserInputError("Post cannot be empty");
       }
 
       const postData = {
-        body,
+        body: postBody,
         type,
-        userId: user.id,
+        userId: id,
         createdAt: new Date().toISOString(),
       };
 
-      type === "IMAGE" && (postData.image = image);
+      let newPost;
 
-      const newPost = new Post(postData);
+      try {
+        if (type === "IMAGE") {
+          const imageKey = await uploadFile(image);
+          postData.image = imageKey;
+        }
 
-      const post = await newPost.save();
+        newPost = new Post(postData);
+        await newPost.save();
+      } catch (err) {
+        throw new Error(err);
+      }
 
       context.pubsub.publish("NEW_POST", {
-        newPost: post,
+        newPost,
       });
 
-      return post;
+      const returnedPost = await Post.findById(newPost.id)
+        .populate("userId", "id firstname lastname image")
+        .populate("comments.userId", "id firstname lastname")
+        .populate("likes.userId", "id firstname lastname")
+        .exec();
+
+      return returnedPost;
     },
 
     async deletePost(_, { postId }, context) {
-      const user = checkAuth(context);
+      const { id } = checkAuth(context);
 
       try {
         const post = await Post.findById(postId);
 
-        if (user.username === post.username) {
+        if (id === post.userId) {
           await post.delete();
           return "Post deleted succesfully";
         } else {
@@ -83,32 +105,6 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
-    },
-    async likePost(_, { postId }, context) {
-      const { id } = checkAuth(context);
-
-      const post = await Post.findById(postId)
-        .populate("comments.userId", "id firstname lastname")
-        .populate("likes.userId", "id firstname lastname")
-        .exec();
-
-      if (!post) {
-        throw new UserInputError("Post not found");
-      }
-
-      if (post.likes.find((like) => like.userId === id)) {
-        //Post already liked, to unlike
-        post.likes = post.likes.filter((like) => like.userId !== id);
-      } else {
-        //Not liked
-        post.likes.push({
-          userId: id,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      await post.save();
-      return updatePost(post);
     },
   },
   Subscription: {

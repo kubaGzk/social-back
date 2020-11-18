@@ -29,6 +29,7 @@
     "graphql-upload": "^11.0.0"
   },
   "devDependencies": {
+    "eslint": "^7.12.1",
     "nodemon": "^2.0.5"
   }
 }

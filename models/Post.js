@@ -1,11 +1,17 @@
 const { model, Schema } = require("mongoose");
+const moongose = require("mongoose");
+
+moongose.Schema.Types.String.checkRequired((v) => typeof v === "string");
 
 const postSchema = new Schema({
-  body: { type: String, required: true },
+  body: {
+    type: String,
+    required: true,
+  },
   createdAt: { type: String, required: true },
   userId: {
     type: Schema.Types.ObjectId,
-    ref: "users",
+    ref: "User",
   },
   type: {
     type: String,

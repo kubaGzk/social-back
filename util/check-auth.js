@@ -4,9 +4,9 @@ const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = require("../config");
 
 module.exports = (context) => {
-  const authHeader = context.req.headers.authorization;
+  const { authorization: authHeader } = context.req.headers;
   if (authHeader) {
-    const token = authHeader.split(" ")[1];
+    const [, token] = authHeader.split(" ");
     if (token) {
       try {
         const user = jwt.verify(token, SECRET_KEY);
@@ -19,4 +19,3 @@ module.exports = (context) => {
   }
   throw new Error("Authorization header must be provided");
 };
-

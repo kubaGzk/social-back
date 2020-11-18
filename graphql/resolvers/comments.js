@@ -15,38 +15,97 @@ module.exports = {
         });
       }
 
-      const post = await Post.findById(postId);
+      const newPost = await Post.findById(postId).exec();
 
-      if (post) {
-        post.comments.unshift({
-          body,
+      if (!newPost) {
+        throw new UserInputError("Post not found");
+      }
+
+      newPost.comments.unshift({
+        body,
+        userId: id,
+        createdAt: new Date().toISOString(),
+      });
+
+      try {
+        await newPost.save();
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      const returnedPost = await Post.findById(newPost.id)
+        .populate("userId", "id firstname lastname image")
+        .populate("comments.userId", "id firstname lastname")
+        .populate("likes.userId", "id firstname lastname")
+        .exec();
+
+      return returnedPost;
+    },
+    async deleteComment(_, { postId, commentId }, context) {
+      const { id } = checkAuth(context);
+
+      const newPost = await Post.findById(postId).exec();
+
+      if (!newPost) {
+        throw new UserInputError("Post not found");
+      }
+
+      const commentIndex = newPost.comments.findIndex(
+        (c) => c.id === commentId
+      );
+
+      if (newPost.comments[commentIndex].userId === id) {
+        newPost.comments.splice(commentIndex, 1);
+      } else {
+        throw new AuthenticationError("Action not allowed");
+      }
+
+      try {
+        await newPost.save();
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      const post = await Post.findById(newPost.id)
+        .populate("userId", "id firstname lastname image")
+        .populate("comments.userId", "id firstname lastname")
+        .populate("likes.userId", "id firstname lastname")
+        .exec();
+
+      return post;
+    },
+    async likePost(_, { postId }, context) {
+      const { id } = checkAuth(context);
+
+      const newPost = await Post.findById(postId).exec();
+
+      if (!newPost) {
+        throw new UserInputError("Post not found");
+      }
+
+      if (newPost.likes.find((like) => like.userId === id)) {
+        //Post already liked, to unlike
+        newPost.likes = newPost.likes.filter((like) => like.userId !== id);
+      } else {
+        //Not liked
+        newPost.likes.push({
           userId: id,
           createdAt: new Date().toISOString(),
         });
-
-        await post.save();
-        return post;
-      } else {
-        throw new UserInputError("Post not found");
       }
-    },
-    async deleteComment(_, { postId, commentId }, context) {
-      const { username } = checkAuth(context);
 
-      const post = await Post.findById(postId);
-      if (post) {
-        const commentIndex = post.comments.findIndex((c) => c.id === commentId);
-
-        if (post.comments[commentIndex].username === username) {
-          post.comments.splice(commentIndex, 1);
-          await post.save();
-          return post;
-        } else {
-          throw new AuthenticationError("Action not allowed");
-        }
-      } else {
-        throw new UserInputError("Post not found");
+      try {
+        await newPost.save();
+      } catch (err) {
+        throw new Error(err);
       }
+
+      const post = await Post.findById(newPost.id)
+        .populate("userId", "id firstname lastname image")
+        .populate("comments.userId", "id firstname lastname")
+        .populate("likes.userId", "id firstname lastname")
+        .exec();
+      return post;
     },
   },
 };
