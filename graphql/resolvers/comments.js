@@ -21,7 +21,7 @@ module.exports = {
         throw new UserInputError("Post not found");
       }
 
-      newPost.comments.unshift({
+      newPost.comments.push({
         body,
         userId: id,
         createdAt: new Date().toISOString(),
@@ -35,7 +35,7 @@ module.exports = {
 
       const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname")
+        .populate("comments.userId", "id firstname lastname image image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
@@ -54,7 +54,7 @@ module.exports = {
         (c) => c.id === commentId
       );
 
-      if (newPost.comments[commentIndex].userId === id) {
+      if (newPost.comments[commentIndex].userId.toString() === id) {
         newPost.comments.splice(commentIndex, 1);
       } else {
         throw new AuthenticationError("Action not allowed");
@@ -68,7 +68,7 @@ module.exports = {
 
       const post = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname")
+        .populate("comments.userId", "id firstname lastname image image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
@@ -83,9 +83,11 @@ module.exports = {
         throw new UserInputError("Post not found");
       }
 
-      if (newPost.likes.find((like) => like.userId === id)) {
+      if (newPost.likes.find((like) => like.userId.toString() === id)) {
         //Post already liked, to unlike
-        newPost.likes = newPost.likes.filter((like) => like.userId !== id);
+        newPost.likes = newPost.likes.filter(
+          (like) => like.userId.toString() !== id
+        );
       } else {
         //Not liked
         newPost.likes.push({
@@ -102,7 +104,7 @@ module.exports = {
 
       const post = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname")
+        .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
       return post;

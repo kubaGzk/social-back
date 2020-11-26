@@ -52,6 +52,7 @@ const updateComments = (post) =>
     userId: com.userId.id || com.userId,
     firstname: com.userId.firstname,
     lastname: com.userId.lastname,
+    image: com.userId.image,
   }));
 
 const updateLikes = (post) =>

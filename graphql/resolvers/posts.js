@@ -11,7 +11,7 @@ module.exports = {
       try {
         posts = await Post.find()
           .populate("userId", "id firstname lastname image")
-          .populate("comments.userId", "id firstname lastname")
+          .populate("comments.userId", "id firstname lastname image")
           .populate("likes.userId", "id firstname lastname")
           .sort({ createdAt: -1 })
           .exec();
@@ -26,7 +26,7 @@ module.exports = {
       try {
         post = await Post.findById(postId)
           .populate("userId", "id firstname lastname image")
-          .populate("comments.userId", "id firstname lastname")
+          .populate("comments.userId", "id firstname lastname image")
           .populate("likes.userId", "id firstname lastname")
           .exec();
       } catch (err) {
@@ -83,7 +83,7 @@ module.exports = {
 
       const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname")
+        .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
@@ -93,18 +93,27 @@ module.exports = {
     async deletePost(_, { postId }, context) {
       const { id } = checkAuth(context);
 
+      let post;
       try {
-        const post = await Post.findById(postId);
-
-        if (id === post.userId) {
-          await post.delete();
-          return "Post deleted succesfully";
-        } else {
-          throw new AuthenticationError("Action not allowed");
-        }
+        post = await Post.findById(postId);
       } catch (err) {
         throw new Error(err);
       }
+
+      if (!post) {
+        throw new Error("Post cannot be found");
+      }
+
+      if (id !== post.userId.toString()) {
+        throw new AuthenticationError("Action not allowed");
+      }
+
+      try {
+        await post.delete();
+      } catch (err) {
+        throw new Error(err);
+      }
+      return postId;
     },
   },
   Subscription: {

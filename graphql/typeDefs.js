@@ -24,6 +24,7 @@ module.exports = gql`
     body: String!
     firstname: String
     lastname: String
+    image: String
   }
 
   enum PostType {
