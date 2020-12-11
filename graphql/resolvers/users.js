@@ -99,8 +99,6 @@ module.exports = {
         throw new ApolloError(err);
       }
 
-      console.log(imageKey);
-
       const newUser = new User({
         email,
         username,

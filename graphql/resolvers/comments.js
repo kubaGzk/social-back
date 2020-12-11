@@ -35,7 +35,7 @@ module.exports = {
 
       const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname image image")
+        .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
@@ -68,7 +68,7 @@ module.exports = {
 
       const post = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
-        .populate("comments.userId", "id firstname lastname image image")
+        .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 

@@ -62,7 +62,7 @@ module.exports = gql`
   }
 
   type Query {
-    getPosts: [Post]
+    getPosts(offset: Int, userId: ID): [Post]
     getPost(postId: ID!): Post
   }
 

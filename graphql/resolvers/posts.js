@@ -5,11 +5,17 @@ const uploadFile = require("../../util/upload-file");
 
 module.exports = {
   Query: {
-    async getPosts() {
+    async getPosts(_, { offset, userId }) {
+      const ind = offset || 0;
+
+      console.log(userId);
+
       let posts;
 
       try {
         posts = await Post.find()
+          .skip(ind)
+          .limit(10)
           .populate("userId", "id firstname lastname image")
           .populate("comments.userId", "id firstname lastname image")
           .populate("likes.userId", "id firstname lastname")

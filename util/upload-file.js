@@ -27,6 +27,7 @@ const s3upload = (stream) => {
     Bucket: AWS_S3_BUCKET,
     ACL: "public-read-write",
     Key: fileKey,
+    ContentType: "image/jpeg",
   });
 
   upload.maxPartSize(20971520);

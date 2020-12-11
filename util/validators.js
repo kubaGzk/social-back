@@ -31,7 +31,6 @@ module.exports.validateRegisterInput = (
   } else if (password !== confirmPassword) {
     errors.confirmPassword = "Passwords must match";
   }
-  console.log(image);
   if (!image) {
     errors.image = "Image must be provided";
   }
