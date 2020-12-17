@@ -1,6 +1,7 @@
 const postsResolvers = require("./posts");
 const usersResolvers = require("./users");
 const commentsResolvers = require("./comments");
+const invitesResolvers = require("./invites");
 const { updateComments, updateLikes } = require("../../util/update-posts");
 
 module.exports = {
@@ -15,11 +16,12 @@ module.exports = {
     userImage: (parent) => parent.userId.image,
   },
 
-  Query: { ...postsResolvers.Query },
+  Query: { ...postsResolvers.Query, ...usersResolvers.Query },
   Mutation: {
     ...usersResolvers.Mutation,
     ...postsResolvers.Mutation,
     ...commentsResolvers.Mutation,
+    ...invitesResolvers.Mutation,
   },
   Subscription: {
     ...postsResolvers.Subscription,

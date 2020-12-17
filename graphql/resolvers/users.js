@@ -21,6 +21,25 @@ const generateToken = (user) =>
   );
 
 module.exports = {
+  Query: {
+    async getUserInfo(_, { userId }) {
+      let user;
+      try {
+        user = await User.findById(
+          userId,
+          "email lastname firstname createdAt image"
+        ).exec();
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      return user;
+    },
+  },
   Mutation: {
     async login(_, { username, password }) {
       const { errors, valid } = validateLoginInput(username, password);

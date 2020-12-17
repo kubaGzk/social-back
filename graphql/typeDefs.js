@@ -59,11 +59,36 @@ module.exports = gql`
     lastname: String!
     createdAt: String!
     image: String!
+    friends: [ID!]
+    posts: [ID!]
+  }
+
+  type UserInfo {
+    id: ID!
+    email: String!
+    firstname: String!
+    lastname: String!
+    createdAt: String!
+    image: String!
+  }
+
+  enum InviteStatus {
+    SEND
+    CONFIRMED
+    DECLINED
+  }
+
+  type Invite {
+    id: ID!
+    requestor: ID!
+    receiver: ID!
+    status: InviteStatus!
   }
 
   type Query {
     getPosts(offset: Int, userId: ID): [Post]
     getPost(postId: ID!): Post
+    getUserInfo(userId: ID!): UserInfo
   }
 
   type Mutation {
@@ -71,13 +96,18 @@ module.exports = gql`
     login(username: String!, password: String!): User!
     validateToken: User!
     createPost(type: PostType!, body: String, image: Upload): Post!
+    editPost(postId: ID!, body: String, image: Upload): Post!
     deletePost(postId: ID!): ID!
     createComment(postId: ID!, body: String!): Post!
     deleteComment(postId: ID!, commentId: ID!): Post!
     likePost(postId: ID!): Post!
+    createInvite(receiver: ID!): Invite!
+    confirmInvite(inviteId: ID!): Invite!
+    declineInvite(inviteId: ID!): Invite!
   }
 
   type Subscription {
     newPost: Post!
+    newInvite: Invite!
   }
 `;

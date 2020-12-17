@@ -260,7 +260,7 @@ module.exports = {
             "double"
         ],
         "radix": "error",
-        "require-atomic-updates": "error",
+        "require-atomic-updates": "off",
         "require-await": "error",
         "require-jsdoc": "error",
         "require-unicode-regexp": "error",

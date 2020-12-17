@@ -8,6 +8,30 @@ const userSchema = new Schema({
   email: { type: String, required: true },
   createdAt: { type: String, required: true },
   image: { type: String, required: true },
+  friends: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  posts: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Post",
+    },
+  ],
+  invitesReceived: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Invites",
+    },
+  ],
+  invitesSend: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Invites",
+    },
+  ],
 });
 
 module.exports = model("User", userSchema);
