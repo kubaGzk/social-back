@@ -1,4 +1,5 @@
 const Post = require("../../models/Post");
+const User = require("../../models/User");
 const checkAuth = require("../../util/check-auth");
 const { AuthenticationError, UserInputError } = require("apollo-server");
 const uploadFile = require("../../util/upload-file");
@@ -9,6 +10,8 @@ const {
   AWS_S3_BUCKET,
   AWS_REGION,
 } = require("../../config");
+
+const mongoose = require("mongoose");
 
 aws.config.update({
   accessKeyId: AWS_ACC_KEY,
@@ -96,7 +99,18 @@ module.exports = {
         }
 
         newPost = new Post(postData);
-        await newPost.save();
+
+        const sess = await mongoose.startSession();
+        sess.startTransaction();
+
+        await newPost.save({ session: sess });
+
+        const user = await User.findById(id).exec();
+
+        user.posts.push(newPost.id);
+        await user.save({ session: sess });
+
+        await sess.commitTransaction();
       } catch (err) {
         throw new Error(err);
       }
@@ -194,7 +208,17 @@ module.exports = {
             .promise();
           console.log(`Image deleted ${post.image}`, s3response);
         }
-        await post.delete();
+
+        const sess = await mongoose.startSession();
+        sess.startTransaction();
+
+        const user = await User.findById(id).exec();
+        user.posts.pull(post.id);
+        await user.save({ session: sess });
+
+        await post.delete({ session: sess });
+
+        await sess.commitTransaction();
       } catch (err) {
         throw new Error(err);
       }

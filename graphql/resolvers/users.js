@@ -5,11 +5,25 @@ const { UserInputError, ApolloError } = require("apollo-server");
 const {
   validateRegisterInput,
   validateLoginInput,
+  validateUpdateUserInput,
 } = require("../../util/validators");
 const { SECRET_KEY } = require("../../config");
 const User = require("../../models/User");
 const checkAuth = require("../../util/check-auth");
 const uploadFile = require("../../util/upload-file");
+const aws = require("aws-sdk");
+const {
+  AWS_ACC_KEY,
+  AWS_SEC_KEY,
+  AWS_S3_BUCKET,
+  AWS_REGION,
+} = require("../../config");
+
+aws.config.update({
+  accessKeyId: AWS_ACC_KEY,
+  secretAccessKey: AWS_SEC_KEY,
+  region: AWS_REGION,
+});
 
 const generateToken = (user) =>
   jwt.sign(
@@ -23,15 +37,10 @@ const generateToken = (user) =>
 module.exports = {
   Query: {
     async getUserInfo(_, { userId }) {
-      let user;
-      try {
-        user = await User.findById(
-          userId,
-          "email lastname firstname createdAt image"
-        ).exec();
-      } catch (err) {
-        throw new Error(err);
-      }
+      const user = await User.findById(
+        userId,
+        "email lastname firstname description createdAt image friends invitesReceived invitesSend posts"
+      ).exec();
 
       if (!user) {
         throw new Error("User not found");
@@ -152,6 +161,52 @@ module.exports = {
       const returnedUser = await User.findById(user.id).exec();
 
       return returnedUser;
+    },
+    async updateUser(
+      parent,
+      { firstname, lastname, description, image },
+      context
+    ) {
+      const { id } = checkAuth(context);
+
+      const { valid, errors } = validateUpdateUserInput(
+        firstname,
+        lastname,
+        description
+      );
+
+      if (!valid) {
+        throw new UserInputError("Errors", { errors });
+      }
+
+      let updatedUser;
+
+      try {
+        updatedUser = await User.findById(id);
+
+        updatedUser.firstname = firstname;
+        updatedUser.lastname = lastname;
+        updatedUser.description = description;
+
+        if (image) {
+          const imageKey = await uploadFile(image);
+          const oldImage = updatedUser.image;
+          updatedUser.image = imageKey;
+
+          const s3 = new aws.S3();
+
+          const s3response = await s3
+            .deleteObject({ Bucket: AWS_S3_BUCKET, Key: oldImage })
+            .promise();
+          console.log(`Image deleted ${oldImage}`, s3response);
+        }
+
+        await updatedUser.save();
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      return updatedUser;
     },
   },
 };

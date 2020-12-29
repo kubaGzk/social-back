@@ -245,7 +245,7 @@ module.exports = {
         "prefer-const": "error",
         "prefer-destructuring": "error",
         "prefer-exponentiation-operator": "error",
-        "prefer-named-capture-group": "error",
+        "prefer-named-capture-group": "off",
         "prefer-numeric-literals": "error",
         "prefer-object-spread": "error",
         "prefer-promise-reject-errors": "error",
@@ -263,7 +263,7 @@ module.exports = {
         "require-atomic-updates": "off",
         "require-await": "error",
         "require-jsdoc": "error",
-        "require-unicode-regexp": "error",
+        "require-unicode-regexp": "off",
         "rest-spread-spacing": [
             "error",
             "never"

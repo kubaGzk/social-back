@@ -8,6 +8,7 @@ const userSchema = new Schema({
   email: { type: String, required: true },
   createdAt: { type: String, required: true },
   image: { type: String, required: true },
+  description: { type: String },
   friends: [
     {
       type: Schema.Types.ObjectId,
@@ -23,13 +24,13 @@ const userSchema = new Schema({
   invitesReceived: [
     {
       type: Schema.Types.ObjectId,
-      ref: "Invites",
+      ref: "User",
     },
   ],
   invitesSend: [
     {
       type: Schema.Types.ObjectId,
-      ref: "Invites",
+      ref: "User",
     },
   ],
 });

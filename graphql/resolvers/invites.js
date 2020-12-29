@@ -1,10 +1,37 @@
-const { UserInputError, AuthenticationError } = require("apollo-server");
+const { UserInputError } = require("apollo-server");
 const mongoose = require("mongoose");
-const Invite = require("../../models/Invite");
+
 const User = require("../../models/User");
 const checkAuth = require("../../util/check-auth");
 
 module.exports = {
+  Query: {
+    getInvitations: async (_, body, context) => {
+      const { id } = checkAuth(context);
+
+      const invites = { sent: [], received: [] };
+
+      try {
+        const user = await User.findById(id, "invitesSend invitesReceived")
+          .populate("invitesSend", "firstname lastname image")
+          .populate("invitesReceived", "firstname lastname image")
+          .exec();
+
+        for (const iS of user.invitesSend) {
+          invites.sent.push(iS);
+        }
+
+        for (const iR of user.invitesReceived) {
+          invites.received.push(iR);
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      return invites;
+    },
+  },
+
   Mutation: {
     createInvite: async (_, { receiver }, context) => {
       const { id: requestor } = checkAuth(context);
@@ -22,6 +49,10 @@ module.exports = {
         "invitesReceived invitesSend friends"
       );
 
+      if (!receiveUser) {
+        throw new UserInputError("Receiver does not exist");
+      }
+
       if (
         requestUser.friends.indexOf(receiver) !== -1 ||
         receiveUser.friends.indexOf(requestor) !== -1
@@ -29,23 +60,16 @@ module.exports = {
         throw new UserInputError("Relation already exist");
       }
 
-      const receiverExistingInvite = await Invite.findOne({
-        receiver: requestor,
-        requestor: receiver,
-      });
-
-      if (receiverExistingInvite && receiverExistingInvite.status === "SEND") {
+      if (requestUser.invitesReceived.indexOf(receiver) !== -1) {
         try {
           const sess = await mongoose.startSession();
           sess.startTransaction();
 
-          receiverExistingInvite.status = "CONFIRMED";
-
           requestUser.invitesReceived = requestUser.invitesReceived.filter(
-            (el) => el.toString() !== receiverExistingInvite.id.toString()
+            (el) => el.toString() !== receiveUser.id.toString()
           );
           receiveUser.invitesSend = receiveUser.invitesSend.filter(
-            (el) => el.toString() !== receiverExistingInvite.id.toString()
+            (el) => el.toString() !== requestUser.id.toString()
           );
 
           requestUser.friends.push(receiveUser.id);
@@ -54,49 +78,19 @@ module.exports = {
           await requestUser.save({ session: sess });
           await receiveUser.save({ session: sess });
 
-          await receiverExistingInvite.save({ session: sess });
-
           await sess.commitTransaction();
         } catch (err) {
           throw new Error(err);
         }
-        return receiverExistingInvite;
-      }
-
-      let invite;
-
-      const existingInvite = await Invite.findOne({
-        requestor,
-        receiver,
-      }).exec();
-
-      if (existingInvite) {
-        switch (existingInvite.status) {
-          case "SEND":
-            throw new UserInputError("Invitation has been sent already");
-
-          case "DECLINED":
-            invite = existingInvite;
-            invite.status = "SEND";
-            break;
-
-          default:
-            break;
-        }
-      }
-
-      if (!invite) {
-        invite = new Invite({ requestor, receiver, status: "SEND" });
+        return "Invitation has been accepted.";
       }
 
       try {
         const sess = await mongoose.startSession();
         sess.startTransaction();
 
-        await invite.save({ session: sess });
-
-        requestUser.invitesSend.push(invite.id);
-        receiveUser.invitesReceived.push(invite.id);
+        requestUser.invitesSend.push(receiveUser.id);
+        receiveUser.invitesReceived.push(requestUser.id);
 
         await requestUser.save({ session: sess });
         await receiveUser.save({ session: sess });
@@ -105,47 +99,33 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
-      return invite;
+      return "Invitation has been sent.";
     },
-    confirmInvite: async (_, { inviteId }, context) => {
+    confirmInvite: async (_, { requestor }, context) => {
       const { id: receiver } = checkAuth(context);
 
-      const invite = await Invite.findById(inviteId);
+      const requestUser = await User.findById(
+        requestor,
+        " invitesReceived invitesSend friends"
+      );
+      const receiveUser = await User.findById(
+        receiver,
+        "invitesReceived invitesSend friends"
+      );
 
-      if (!invite) {
-        throw new UserInputError("Cannot find this invite");
-      }
-
-      if (receiver !== invite.receiver.toString()) {
-        throw new AuthenticationError("You are not authorized");
-      }
-
-      if (invite.status !== "SEND") {
-        throw new UserInputError(
-          "Cannot respond to this invite - confirmed/declined already"
-        );
+      if (receiveUser.invitesReceived.indexOf(requestor) === -1) {
+        throw new Error("There is no such invitation");
       }
 
       try {
         const sess = await mongoose.startSession();
         sess.startTransaction();
 
-        invite.status = "CONFIRMED";
-
-        const requestUser = await User.findById(
-          invite.requestor,
-          "invitesSend friends"
-        );
-        const receiveUser = await User.findById(
-          invite.receiver,
-          "invitesReceived friends"
-        );
-
         requestUser.invitesSend = requestUser.invitesSend.filter(
-          (el) => el.toString() !== invite.id.toString()
+          (el) => el.toString() !== receiveUser.id.toString()
         );
         receiveUser.invitesReceived = receiveUser.invitesReceived.filter(
-          (el) => el.toString() !== invite.id.toString()
+          (el) => el.toString() !== requestUser.id.toString()
         );
 
         requestUser.friends.push(receiveUser.id);
@@ -154,67 +134,49 @@ module.exports = {
         await requestUser.save({ session: sess });
         await receiveUser.save({ session: sess });
 
-        await invite.save({ session: sess });
-
         await sess.commitTransaction();
       } catch (err) {
         throw new Error(err);
       }
 
-      return invite;
+      return "Invitation has been accepted.";
     },
-    declineInvite: async (_, { inviteId }, context) => {
+    declineInvite: async (_, { requestor }, context) => {
       const { id: receiver } = checkAuth(context);
 
-      const invite = await Invite.findById(inviteId);
+      const requestUser = await User.findById(
+        requestor,
+        " invitesReceived invitesSend friends"
+      );
+      const receiveUser = await User.findById(
+        receiver,
+        "invitesReceived invitesSend friends"
+      );
 
-      if (!invite) {
-        throw new UserInputError("Cannot find this invite");
-      }
-
-      if (receiver !== invite.receiver.toString()) {
-        throw new AuthenticationError("You are not authorized");
-      }
-
-      if (invite.status !== "SEND") {
-        throw new UserInputError(
-          "Cannot respond to this invite - confirmed/declined already"
-        );
+      if (receiveUser.invitesReceived.indexOf(requestor) === -1) {
+        throw new Error("There is no such invitation");
       }
 
       try {
         const sess = await mongoose.startSession();
-        await sess.startTransaction();
-
-        invite.status = "DECLINED";
-
-        const requestUser = await User.findById(
-          invite.requestor,
-          "invitesSend"
-        );
-        const receiveUser = await User.findById(
-          invite.receiver,
-          "invitesReceived"
-        );
+        sess.startTransaction();
 
         requestUser.invitesSend = requestUser.invitesSend.filter(
-          (el) => el.toString() !== invite.id.toString()
+          (el) => el.toString() !== receiveUser.id.toString()
         );
         receiveUser.invitesReceived = receiveUser.invitesReceived.filter(
-          (el) => el.toString() !== invite.id.toString()
+          (el) => el.toString() !== requestUser.id.toString()
         );
 
         await requestUser.save({ session: sess });
         await receiveUser.save({ session: sess });
 
-        await invite.save({ session: sess });
-
         await sess.commitTransaction();
       } catch (err) {
         throw new Error(err);
       }
 
-      return invite;
+      return "Invitation has been declined";
     },
   },
 };

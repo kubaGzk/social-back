@@ -20,7 +20,7 @@ module.exports.validateRegisterInput = (
   if (email.trim() === "") {
     errors.email = "Email must not be empty";
   } else {
-    const regEx = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    const regEx = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
     if (!email.match(regEx)) {
       errors.email = "Email must be a valid email address";
     }
@@ -48,6 +48,24 @@ module.exports.validateLoginInput = (username, password) => {
   }
   if (password.trim() === "") {
     errors.password = "Password must not be empty";
+  }
+  return {
+    errors,
+    valid: Object.keys(errors).length < 1,
+  };
+};
+
+module.exports.validateUpdateUserInput = (firstname, lastname, description) => {
+  const errors = {};
+  if (firstname.trim() === "") {
+    errors.firstname = "First name must not be empty";
+  }
+  if (lastname.trim() === "") {
+    errors.lastname = "Last name must not be empty";
+  }
+
+  if (description.trim() === "") {
+    errors.description = "Description name must not be empty";
   }
   return {
     errors,

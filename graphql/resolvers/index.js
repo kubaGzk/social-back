@@ -15,8 +15,15 @@ module.exports = {
     lastname: (parent) => parent.userId.lastname,
     userImage: (parent) => parent.userId.image,
   },
+  UserInfo: {
+    postsCount: (parent) => parent.posts.length,
+  },
 
-  Query: { ...postsResolvers.Query, ...usersResolvers.Query },
+  Query: {
+    ...postsResolvers.Query,
+    ...usersResolvers.Query,
+    ...invitesResolvers.Query,
+  },
   Mutation: {
     ...usersResolvers.Mutation,
     ...postsResolvers.Mutation,

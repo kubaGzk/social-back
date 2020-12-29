@@ -61,6 +61,8 @@ module.exports = gql`
     image: String!
     friends: [ID!]
     posts: [ID!]
+    invitesSend: [ID!]
+    invitesReceived: [ID!]
   }
 
   type UserInfo {
@@ -70,30 +72,47 @@ module.exports = gql`
     lastname: String!
     createdAt: String!
     image: String!
+    description: String
+    friends: [ID!]
+    postsCount: Int!
+    invitesSend: [ID!]
+    invitesReceived: [ID!]
   }
 
-  enum InviteStatus {
-    SEND
-    CONFIRMED
-    DECLINED
-  }
+  # enum InviteStatus {
+  #   SEND
+  #   CONFIRMED
+  #   DECLINED
+  # }
 
   type Invite {
     id: ID!
-    requestor: ID!
-    receiver: ID!
-    status: InviteStatus!
+    firstname: String!
+    lastname: String!
+    image: String!
+  }
+
+  type Invites {
+    received: [Invite]
+    sent: [Invite]
   }
 
   type Query {
     getPosts(offset: Int, userId: ID): [Post]
     getPost(postId: ID!): Post
     getUserInfo(userId: ID!): UserInfo
+    getInvitations: Invites
   }
 
   type Mutation {
     register(registerInput: RegisterInput): User!
     login(username: String!, password: String!): User!
+    updateUser(
+      firstname: String!
+      lastname: String!
+      description: String!
+      image: Upload
+    ): UserInfo!
     validateToken: User!
     createPost(type: PostType!, body: String, image: Upload): Post!
     editPost(postId: ID!, body: String, image: Upload): Post!
@@ -101,13 +120,12 @@ module.exports = gql`
     createComment(postId: ID!, body: String!): Post!
     deleteComment(postId: ID!, commentId: ID!): Post!
     likePost(postId: ID!): Post!
-    createInvite(receiver: ID!): Invite!
-    confirmInvite(inviteId: ID!): Invite!
-    declineInvite(inviteId: ID!): Invite!
+    createInvite(receiver: ID!): String!
+    confirmInvite(requestor: ID!): String!
+    declineInvite(requestor: ID!): String!
   }
 
   type Subscription {
     newPost: Post!
-    newInvite: Invite!
   }
 `;
