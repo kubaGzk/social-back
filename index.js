@@ -1,5 +1,4 @@
 const { ApolloServer, PubSub } = require("apollo-server");
-const gql = require("graphql-tag");
 const mongoose = require("mongoose");
 
 const { MONGODB } = require("./config.js");
@@ -18,6 +17,7 @@ mongoose
   .connect(MONGODB, { useNewUrlParser: true })
   .then(() => {
     console.log("MongoDB Connected");
+    //eslint-disable-next-line no-undef
     return server.listen({ port: process.env.PORT || 5000 });
   })
   .then((res) => {

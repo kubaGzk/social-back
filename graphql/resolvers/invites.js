@@ -1,4 +1,4 @@
-const { UserInputError } = require("apollo-server");
+const { UserInputError, withFilter } = require("apollo-server");
 const mongoose = require("mongoose");
 
 const User = require("../../models/User");
@@ -42,11 +42,11 @@ module.exports = {
 
       const requestUser = await User.findById(
         requestor,
-        "invitesReceived invitesSend friends"
+        "invitesReceived invitesSend friends firstname lastname image"
       );
       const receiveUser = await User.findById(
         receiver,
-        "invitesReceived invitesSend friends"
+        "invitesReceived invitesSend friends firstname lastname image"
       );
 
       if (!receiveUser) {
@@ -82,6 +82,18 @@ module.exports = {
         } catch (err) {
           throw new Error(err);
         }
+
+        context.pubsub.publish("INVITE", {
+          invite: {
+            type: "CONFIRMED",
+            receiverId: receiveUser.id,
+            id: requestUser.id,
+            firstname: requestUser.firstname,
+            lastname: requestUser.lastname,
+            image: requestUser.image,
+          },
+        });
+
         return "Invitation has been accepted.";
       }
 
@@ -99,6 +111,18 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
+
+      context.pubsub.publish("INVITE", {
+        invite: {
+          type: "RECEIVED",
+          receiverId: receiveUser.id,
+          id: requestUser.id,
+          firstname: requestUser.firstname,
+          lastname: requestUser.lastname,
+          image: requestUser.image,
+        },
+      });
+
       return "Invitation has been sent.";
     },
     confirmInvite: async (_, { requestor }, context) => {
@@ -110,7 +134,7 @@ module.exports = {
       );
       const receiveUser = await User.findById(
         receiver,
-        "invitesReceived invitesSend friends"
+        "invitesReceived invitesSend friends firstname lastname image"
       );
 
       if (receiveUser.invitesReceived.indexOf(requestor) === -1) {
@@ -138,6 +162,17 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
+
+      context.pubsub.publish("INVITE", {
+        invite: {
+          type: "CONFIRMED",
+          receiverId: requestUser.id,
+          id: receiveUser.id,
+          firstname: receiveUser.firstname,
+          lastname: receiveUser.lastname,
+          image: receiveUser.image,
+        },
+      });
 
       return "Invitation has been accepted.";
     },
@@ -177,6 +212,14 @@ module.exports = {
       }
 
       return "Invitation has been declined";
+    },
+  },
+  Subscription: {
+    invite: {
+      subscribe: withFilter(
+        (_, data, { pubsub }) => pubsub.asyncIterator("INVITE"),
+        (payload, variables) => payload.invite.receiverId === variables.userId
+      ),
     },
   },
 };

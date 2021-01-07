@@ -115,15 +115,15 @@ module.exports = {
         throw new Error(err);
       }
 
-      context.pubsub.publish("NEW_POST", {
-        newPost,
-      });
-
       const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
         .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
+
+      context.pubsub.publish("NEW_POST", {
+        newPost: returnedPost,
+      });
 
       return returnedPost;
     },
@@ -168,15 +168,15 @@ module.exports = {
         throw new Error(err);
       }
 
-      context.pubsub.publish("EDITED_POST", {
-        editedPost,
-      });
-
       const returnedPost = await Post.findById(editedPost.id)
         .populate("userId", "id firstname lastname image")
         .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
+
+      context.pubsub.publish("EDITED_POST", {
+        editedPost: returnedPost,
+      });
 
       return returnedPost;
     },
@@ -222,12 +222,23 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
+
+      context.pubsub.publish("DELETED_POST", {
+        deletedPost: postId,
+      });
+
       return postId;
     },
   },
   Subscription: {
     newPost: {
       subscribe: (_, data, { pubsub }) => pubsub.asyncIterator("NEW_POST"),
+    },
+    editedPost: {
+      subscribe: (_, data, { pubsub }) => pubsub.asyncIterator("EDITED_POST"),
+    },
+    deletedPost: {
+      subscribe: (_, data, { pubsub }) => pubsub.asyncIterator("DELETED_POST"),
     },
   },
 };

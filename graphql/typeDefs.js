@@ -79,13 +79,21 @@ module.exports = gql`
     invitesReceived: [ID!]
   }
 
-  # enum InviteStatus {
-  #   SEND
-  #   CONFIRMED
-  #   DECLINED
-  # }
+  enum InviteType {
+    RECEIVED
+    CONFIRMED
+  }
 
   type Invite {
+    id: ID!
+    firstname: String!
+    lastname: String!
+    image: String!
+  }
+
+  type InviteNotification {
+    type: InviteType!
+    receiverId: ID!
     id: ID!
     firstname: String!
     lastname: String!
@@ -127,5 +135,8 @@ module.exports = gql`
 
   type Subscription {
     newPost: Post!
+    editedPost: Post!
+    deletedPost: ID!
+    invite(userId: ID!): InviteNotification!
   }
 `;

@@ -39,6 +39,10 @@ module.exports = {
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
+      context.pubsub.publish("EDITED_POST", {
+        editedPost: returnedPost,
+      });
+
       return returnedPost;
     },
     async deleteComment(_, { postId, commentId }, context) {
@@ -66,13 +70,17 @@ module.exports = {
         throw new Error(err);
       }
 
-      const post = await Post.findById(newPost.id)
+      const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
         .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
 
-      return post;
+      context.pubsub.publish("EDITED_POST", {
+        editedPost: returnedPost,
+      });
+
+      return returnedPost;
     },
     async likePost(_, { postId }, context) {
       const { id } = checkAuth(context);
@@ -102,12 +110,17 @@ module.exports = {
         throw new Error(err);
       }
 
-      const post = await Post.findById(newPost.id)
+      const returnedPost = await Post.findById(newPost.id)
         .populate("userId", "id firstname lastname image")
         .populate("comments.userId", "id firstname lastname image")
         .populate("likes.userId", "id firstname lastname")
         .exec();
-      return post;
+
+      context.pubsub.publish("EDITED_POST", {
+        editedPost: returnedPost,
+      });
+
+      return returnedPost;
     },
   },
 };

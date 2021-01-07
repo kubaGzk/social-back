@@ -32,5 +32,6 @@ module.exports = {
   },
   Subscription: {
     ...postsResolvers.Subscription,
+    ...invitesResolvers.Subscription,
   },
 };
