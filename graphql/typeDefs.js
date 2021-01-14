@@ -110,6 +110,7 @@ module.exports = gql`
     getPost(postId: ID!): Post
     getUserInfo(userId: ID!): UserInfo
     getInvitations: Invites
+    getUserList(text: String!): [UserInfo]
   }
 
   type Mutation {

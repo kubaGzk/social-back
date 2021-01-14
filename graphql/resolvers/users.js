@@ -48,6 +48,35 @@ module.exports = {
 
       return user;
     },
+    async getUserList(_, { text }) {
+      let userList;
+
+      const textArr = text.split(" ").reduce((arr, el) => {
+        el.length > 0 && arr.push(new RegExp(el, "gi"));
+        return arr;
+      }, []);
+
+      try {
+        userList = await User.find({
+          $or: [
+            {
+              firstname: { $in: textArr },
+              lastname: { $in: textArr },
+            },
+            {
+              lastname: { $in: textArr[0] },
+            },
+            {
+              firstname: { $in: textArr[0] },
+            },
+          ],
+        }).exec();
+      } catch (err) {
+        throw new Error(err);
+      }
+
+      return userList;
+    },
   },
   Mutation: {
     async login(_, { username, password }) {

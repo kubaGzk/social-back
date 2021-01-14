@@ -145,6 +145,14 @@ module.exports = {
         throw new AuthenticationError("Insufficient access to edit this post");
       }
 
+      if (editedPost.type === "TEXT" && (!body || body.length === 0)) {
+        throw new UserInputError("Errors", {
+          errors: {
+            body: "Body cannot be empty",
+          },
+        });
+      }
+
       if (body) {
         editedPost.body = body;
       }
