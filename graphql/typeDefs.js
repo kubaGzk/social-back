@@ -79,6 +79,13 @@ module.exports = gql`
     invitesReceived: [ID!]
   }
 
+  type UserInfoSimple{
+    id: ID!
+    firstname: String!
+    lastname: String!
+    image: String!
+  }
+
   enum InviteType {
     RECEIVED
     CONFIRMED
@@ -105,12 +112,34 @@ module.exports = gql`
     sent: [Invite]
   }
 
+  type Message {
+    body: String!
+    user: ID!
+    createdAt: String!
+    read: [ID!]
+  }
+
+  type Chat{
+    id: ID!
+    users: [UserInfoSimple!]
+    messages: [Message!]
+    writing: [ID]
+  }
+
+  type ChatListItem{
+    id: ID!
+    users: [UserInfoSimple!]
+    unread: Int!
+  }
+
   type Query {
     getPosts(offset: Int, userId: ID): [Post]
     getPost(postId: ID!): Post
     getUserInfo(userId: ID!): UserInfo
     getInvitations: Invites
     getUserList(text: String!): [UserInfo]
+    getChat(users: [ID]): Chat
+    getChats: [ChatListItem]
   }
 
   type Mutation {
@@ -132,6 +161,11 @@ module.exports = gql`
     createInvite(receiver: ID!): String!
     confirmInvite(requestor: ID!): String!
     declineInvite(requestor: ID!): String!
+    createChat(users: [ID!]): Chat!
+    startWriting(chatId: ID!): Chat!
+    endWriting(chatId: ID!): Chat!
+    writeMessage(chatId: ID!): Chat!
+    readMessage(chatId:ID!, messageIds: [ID!]): Chat!
   }
 
   type Subscription {
@@ -139,5 +173,7 @@ module.exports = gql`
     editedPost: Post!
     deletedPost: ID!
     invite(userId: ID!): InviteNotification!
+    chatChange(userId: ID!): Chat!
+    newChat(userId: ID!): ChatListItem!
   }
 `;

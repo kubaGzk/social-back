@@ -2,6 +2,7 @@ const postsResolvers = require("./posts");
 const usersResolvers = require("./users");
 const commentsResolvers = require("./comments");
 const invitesResolvers = require("./invites");
+const chatsResolvers = require("./chats");
 const { updateComments, updateLikes } = require("../../util/update-posts");
 
 module.exports = {
@@ -16,22 +17,32 @@ module.exports = {
     userImage: (parent) => parent.userId.image,
   },
   UserInfo: {
-    postsCount: (parent) => parent.posts.length,
+    postsCount: (parent, _, __, { variableValues }) => {
+      console.log(variableValues);
+      //Context, wehre is context?
+      return parent.posts.length;
+    },
+  },
+  ChatListItem: {
+    unread: () => 0,
   },
 
   Query: {
     ...postsResolvers.Query,
     ...usersResolvers.Query,
     ...invitesResolvers.Query,
+    ...chatsResolvers.Query,
   },
   Mutation: {
     ...usersResolvers.Mutation,
     ...postsResolvers.Mutation,
     ...commentsResolvers.Mutation,
     ...invitesResolvers.Mutation,
+    ...chatsResolvers.Mutation,
   },
   Subscription: {
     ...postsResolvers.Subscription,
     ...invitesResolvers.Subscription,
+    ...chatsResolvers.Subscription,
   },
 };

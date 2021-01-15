@@ -2,6 +2,7 @@ const { UserInputError, withFilter } = require("apollo-server");
 const mongoose = require("mongoose");
 
 const User = require("../../models/User");
+const Chat = require("../../models/Chat");
 const checkAuth = require("../../util/check-auth");
 
 module.exports = {
@@ -61,6 +62,7 @@ module.exports = {
       }
 
       if (requestUser.invitesReceived.indexOf(receiver) !== -1) {
+        let chat;
         try {
           const sess = await mongoose.startSession();
           sess.startTransaction();
@@ -75,6 +77,16 @@ module.exports = {
           requestUser.friends.push(receiveUser.id);
           receiveUser.friends.push(requestUser.id);
 
+          chat = new Chat({ users: [requestUser.id, receiveUser.id] });
+          await chat.save({ session: sess });
+
+          chat = await Chat.findById(chat.id)
+            .populate("users", "firstname lastname image")
+            .exec();
+
+          requestUser.chats.push(chat.id);
+          receiveUser.chats.push(chat.id);
+
           await requestUser.save({ session: sess });
           await receiveUser.save({ session: sess });
 
@@ -82,6 +94,10 @@ module.exports = {
         } catch (err) {
           throw new Error(err);
         }
+
+        context.pubsub.publish("NEW_CHAT", {
+          newChat: chat,
+        });
 
         context.pubsub.publish("INVITE", {
           invite: {
@@ -140,6 +156,7 @@ module.exports = {
       if (receiveUser.invitesReceived.indexOf(requestor) === -1) {
         throw new Error("There is no such invitation");
       }
+      let chat;
 
       try {
         const sess = await mongoose.startSession();
@@ -155,6 +172,16 @@ module.exports = {
         requestUser.friends.push(receiveUser.id);
         receiveUser.friends.push(requestUser.id);
 
+        chat = new Chat({ users: [requestUser.id, receiveUser.id] });
+        await chat.save({ session: sess });
+
+        chat = await Chat.findById(chat.id)
+          .populate("users", "firstname lastname image")
+          .exec();
+
+        requestUser.chats.push(chat.id);
+        receiveUser.chats.push(chat.id);
+
         await requestUser.save({ session: sess });
         await receiveUser.save({ session: sess });
 
@@ -162,6 +189,10 @@ module.exports = {
       } catch (err) {
         throw new Error(err);
       }
+
+      context.pubsub.publish("NEW_CHAT", {
+        newChat: chat,
+      });
 
       context.pubsub.publish("INVITE", {
         invite: {
