@@ -2,6 +2,7 @@ const {
   ApolloError,
   UserInputError,
   AuthenticationError,
+  withFilter,
 } = require("apollo-server");
 const Chat = require("../../models/Chat");
 const checkAuth = require("../../util/check-auth");
@@ -10,7 +11,7 @@ const mongoose = require("mongoose");
 module.exports = {
   Query: {
     getChat: async (_, { chatId }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
 
       let chat;
       try {
@@ -31,7 +32,7 @@ module.exports = {
       return chat;
     },
     getChats: async (_, data, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
 
       let chats = [];
       try {
@@ -47,13 +48,13 @@ module.exports = {
   },
   Mutation: {
     createChat: async (_, { users }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
 
       const usersArr = [userId, ...users];
       let chat;
 
       try {
-        chat = await Chat.find({
+        chat = await Chat.findOne({
           users: { $all: usersArr, $size: usersArr.length },
         })
           .populate("users", "firstname lastname image")
@@ -89,7 +90,7 @@ module.exports = {
       return chat;
     },
     startWriting: async (_, { chatId }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
 
       let chat;
       try {
@@ -104,7 +105,9 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
-      chat.writing = [...chat.writing, userId];
+      if (chat.writing.findIndex((w) => w.toString() === userId) < 0) {
+        chat.writing = [...chat.writing, userId];
+      }
 
       try {
         await chat.save();
@@ -112,12 +115,12 @@ module.exports = {
         throw new ApolloError(err);
       }
 
-      context.pubsub.publish("CHAT_CHANGE", chat);
+      context.pubsub.publish("CHAT_CHANGE", { chatChange: chat });
 
       return chat;
     },
     endWriting: async (_, { chatId }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
 
       let chat;
       try {
@@ -132,7 +135,7 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
-      chat.writing = chat.writing.filter((w) => w !== userId);
+      chat.writing = chat.writing.filter((w) => w.toString() !== userId);
 
       try {
         await chat.save();
@@ -140,15 +143,15 @@ module.exports = {
         throw new ApolloError(err);
       }
 
-      context.pubsub.publish("CHAT_CHANGE", chat);
+      context.pubsub.publish("CHAT_CHANGE", { chatChange: chat });
 
       return chat;
     },
     writeMessage: async (_, { chatId, body }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
       let chat;
       try {
-        chat = Chat.findById(chatId)
+        chat = await Chat.findById(chatId)
           .populate("users", "firstname lastname image")
           .exec();
       } catch (err) {
@@ -175,15 +178,15 @@ module.exports = {
         throw new ApolloError(err);
       }
 
-      context.pubsub.publish("CHAT_CHANGE", chat);
+      context.pubsub.publish("CHAT_CHANGE", { chatChange: chat });
 
       return chat;
     },
     readMessage: async (_, { chatId, messageIds }, context) => {
-      const { userId } = checkAuth(context);
+      const { id: userId } = checkAuth(context);
       let chat;
       try {
-        chat = Chat.findById(chatId)
+        chat = await Chat.findById(chatId)
           .populate("users", "firstname lastname image")
           .exec();
       } catch (err) {
@@ -194,33 +197,42 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
-      const messageInd = chat.messages.findIndex((msg) => messageIds === msg);
+      chat.messages = chat.messages.map((msg) => {
+        if (messageIds.indexOf(msg.id.toISOString()) >= 0) {
+          msg.read.push(userId);
+        }
+        return msg;
+      });
 
-      if (messageInd < 0) {
-        throw new UserInputError("Cannot find message for provided ID.");
-      }
-      //Chat read to correct
-      chat.messages[messageInd].read = [
-        ...chat.messages[messageInd].read,
-        userId,
-      ];
       try {
         await chat.save();
       } catch (err) {
         throw new ApolloError(err);
       }
 
-      context.pubsub.publish("CHAT_CHANGE", chat);
+      context.pubsub.publish("CHAT_CHANGE", { chatChange: chat });
 
       return chat;
     },
   },
   Subscription: {
     newChat: {
-      subscribe: (_, data, { pubsub }) => pubsub.asyncIterator("NEW_CHAT"),
+      subscribe: withFilter(
+        (_, data, { pubsub }) => pubsub.asyncIterator("NEW_CHAT"),
+        (payload, variables) =>
+          payload.newChat.users.findIndex(
+            (usr) => usr.id === variables.userId
+          ) >= 0
+      ),
     },
     chatChange: {
-      subscribe: (_, data, { pubsub }) => pubsub.asyncIterator("CHAT_CHANGE"),
+      subscribe: withFilter(
+        (_, data, { pubsub }) => pubsub.asyncIterator("CHAT_CHANGE"),
+        (payload, variables) =>
+          payload.chatChange.users.findIndex(
+            (usr) => usr.id === variables.userId
+          ) >= 0
+      ),
     },
   },
 };

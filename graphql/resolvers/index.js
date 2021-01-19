@@ -4,6 +4,7 @@ const commentsResolvers = require("./comments");
 const invitesResolvers = require("./invites");
 const chatsResolvers = require("./chats");
 const { updateComments, updateLikes } = require("../../util/update-posts");
+const checkAuth = require("../../util/check-auth");
 
 module.exports = {
   Post: {
@@ -17,14 +18,25 @@ module.exports = {
     userImage: (parent) => parent.userId.image,
   },
   UserInfo: {
-    postsCount: (parent, _, __, { variableValues }) => {
-      console.log(variableValues);
-      //Context, wehre is context?
-      return parent.posts.length;
-    },
+    postsCount: (parent) => parent.posts.length,
   },
-  ChatListItem: {
-    unread: () => 0,
+  Chat: {
+    unread: (parent, _, context) => {
+      let userId;
+      try {
+        const { id } = checkAuth(context);
+        userId = id;
+      } catch (err) {
+        console.log;
+      }
+      return parent.messages.reduce((acc, msg) => {
+        if (msg.read.indexOf(userId) < 0) {
+          acc += 1;
+        }
+        console.log();
+        return acc;
+      }, 0);
+    },
   },
 
   Query: {

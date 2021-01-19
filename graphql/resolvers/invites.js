@@ -63,6 +63,7 @@ module.exports = {
 
       if (requestUser.invitesReceived.indexOf(receiver) !== -1) {
         let chat;
+        let chatExist = true;
         try {
           const sess = await mongoose.startSession();
           sess.startTransaction();
@@ -77,15 +78,27 @@ module.exports = {
           requestUser.friends.push(receiveUser.id);
           receiveUser.friends.push(requestUser.id);
 
-          chat = new Chat({ users: [requestUser.id, receiveUser.id] });
-          await chat.save({ session: sess });
+          //CHAT CREATION
+          const usersArr = [requestUser.id, receiveUser.id];
 
-          chat = await Chat.findById(chat.id)
+          chat = await Chat.findOne({
+            users: { $all: usersArr, $size: usersArr.length },
+          })
             .populate("users", "firstname lastname image")
             .exec();
 
-          requestUser.chats.push(chat.id);
-          receiveUser.chats.push(chat.id);
+          if (!chat) {
+            chat = new Chat({ users: [requestUser.id, receiveUser.id] });
+            await chat.save({ session: sess });
+
+            chat = await Chat.findById(chat.id)
+              .populate("users", "firstname lastname image")
+              .exec();
+
+            requestUser.chats.push(chat.id);
+            receiveUser.chats.push(chat.id);
+            chatExist = false;
+          }
 
           await requestUser.save({ session: sess });
           await receiveUser.save({ session: sess });
@@ -95,9 +108,10 @@ module.exports = {
           throw new Error(err);
         }
 
-        context.pubsub.publish("NEW_CHAT", {
-          newChat: chat,
-        });
+        !chatExist &&
+          context.pubsub.publish("NEW_CHAT", {
+            newChat: chat,
+          });
 
         context.pubsub.publish("INVITE", {
           invite: {
@@ -157,6 +171,7 @@ module.exports = {
         throw new Error("There is no such invitation");
       }
       let chat;
+      let chatExist = true;
 
       try {
         const sess = await mongoose.startSession();
@@ -172,15 +187,27 @@ module.exports = {
         requestUser.friends.push(receiveUser.id);
         receiveUser.friends.push(requestUser.id);
 
-        chat = new Chat({ users: [requestUser.id, receiveUser.id] });
-        await chat.save({ session: sess });
+        //CHAT CREATION
+        const usersArr = [requestUser.id, receiveUser.id];
 
-        chat = await Chat.findById(chat.id)
+        chat = await Chat.findOne({
+          users: { $all: usersArr, $size: usersArr.length },
+        })
           .populate("users", "firstname lastname image")
           .exec();
 
-        requestUser.chats.push(chat.id);
-        receiveUser.chats.push(chat.id);
+        if (!chat) {
+          chat = new Chat({ users: [requestUser.id, receiveUser.id] });
+          await chat.save({ session: sess });
+
+          chat = await Chat.findById(chat.id)
+            .populate("users", "firstname lastname image")
+            .exec();
+
+          requestUser.chats.push(chat.id);
+          receiveUser.chats.push(chat.id);
+          chatExist = false;
+        }
 
         await requestUser.save({ session: sess });
         await receiveUser.save({ session: sess });
@@ -190,9 +217,10 @@ module.exports = {
         throw new Error(err);
       }
 
-      context.pubsub.publish("NEW_CHAT", {
-        newChat: chat,
-      });
+      !chatExist &&
+        context.pubsub.publish("NEW_CHAT", {
+          newChat: chat,
+        });
 
       context.pubsub.publish("INVITE", {
         invite: {

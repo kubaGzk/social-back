@@ -79,7 +79,7 @@ module.exports = gql`
     invitesReceived: [ID!]
   }
 
-  type UserInfoSimple{
+  type UserInfoSimple {
     id: ID!
     firstname: String!
     lastname: String!
@@ -113,22 +113,18 @@ module.exports = gql`
   }
 
   type Message {
+    id: ID!
     body: String!
     user: ID!
     createdAt: String!
     read: [ID!]
   }
 
-  type Chat{
+  type Chat {
     id: ID!
     users: [UserInfoSimple!]
-    messages: [Message!]
+    messages: [Message]
     writing: [ID]
-  }
-
-  type ChatListItem{
-    id: ID!
-    users: [UserInfoSimple!]
     unread: Int!
   }
 
@@ -139,7 +135,7 @@ module.exports = gql`
     getInvitations: Invites
     getUserList(text: String!): [UserInfo]
     getChat(users: [ID]): Chat
-    getChats: [ChatListItem]
+    getChats: [Chat]
   }
 
   type Mutation {
@@ -164,8 +160,8 @@ module.exports = gql`
     createChat(users: [ID!]): Chat!
     startWriting(chatId: ID!): Chat!
     endWriting(chatId: ID!): Chat!
-    writeMessage(chatId: ID!): Chat!
-    readMessage(chatId:ID!, messageIds: [ID!]): Chat!
+    writeMessage(chatId: ID!, body: String!): Chat!
+    readMessage(chatId: ID!, messageIds: [ID!]): Chat!
   }
 
   type Subscription {
@@ -174,6 +170,6 @@ module.exports = gql`
     deletedPost: ID!
     invite(userId: ID!): InviteNotification!
     chatChange(userId: ID!): Chat!
-    newChat(userId: ID!): ChatListItem!
+    newChat(userId: ID!): Chat!
   }
 `;
