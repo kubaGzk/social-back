@@ -5,6 +5,7 @@ const invitesResolvers = require("./invites");
 const chatsResolvers = require("./chats");
 const { updateComments, updateLikes } = require("../../util/update-posts");
 const checkAuth = require("../../util/check-auth");
+const checkAuthWs = require("../../util/check-auth-ws");
 
 module.exports = {
   Post: {
@@ -21,19 +22,19 @@ module.exports = {
     postsCount: (parent) => parent.posts.length,
   },
   Chat: {
-    unread: (parent, _, context) => {
+    unread: (parent, _, context, info) => {
       let userId;
-      try {
-        const { id } = checkAuth(context);
-        userId = id;
-      } catch (err) {
-        console.log;
+
+      if (info.operation.operation === "subscription") {
+        userId = checkAuthWs(context).id;
+      } else {
+        userId = checkAuth(context).id;
       }
+
       return parent.messages.reduce((acc, msg) => {
         if (msg.read.indexOf(userId) < 0) {
           acc += 1;
         }
-        console.log();
         return acc;
       }, 0);
     },

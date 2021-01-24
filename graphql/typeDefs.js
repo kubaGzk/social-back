@@ -134,7 +134,7 @@ module.exports = gql`
     getUserInfo(userId: ID!): UserInfo
     getInvitations: Invites
     getUserList(text: String!): [UserInfo]
-    getChat(users: [ID]): Chat
+    getChat(chatId: ID!): Chat
     getChats: [Chat]
   }
 
@@ -168,8 +168,8 @@ module.exports = gql`
     newPost: Post!
     editedPost: Post!
     deletedPost: ID!
-    invite(userId: ID!): InviteNotification!
-    chatChange(userId: ID!): Chat!
-    newChat(userId: ID!): Chat!
+    invite: InviteNotification!
+    chatChange: Chat!
+    newChat: Chat!
   }
 `;

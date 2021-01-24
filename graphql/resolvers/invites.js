@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const User = require("../../models/User");
 const Chat = require("../../models/Chat");
 const checkAuth = require("../../util/check-auth");
+const checkAuthWs = require("../../util/check-auth-ws");
 
 module.exports = {
   Query: {
@@ -95,8 +96,6 @@ module.exports = {
               .populate("users", "firstname lastname image")
               .exec();
 
-            requestUser.chats.push(chat.id);
-            receiveUser.chats.push(chat.id);
             chatExist = false;
           }
 
@@ -203,9 +202,6 @@ module.exports = {
           chat = await Chat.findById(chat.id)
             .populate("users", "firstname lastname image")
             .exec();
-
-          requestUser.chats.push(chat.id);
-          receiveUser.chats.push(chat.id);
           chatExist = false;
         }
 
@@ -276,8 +272,11 @@ module.exports = {
   Subscription: {
     invite: {
       subscribe: withFilter(
-        (_, data, { pubsub }) => pubsub.asyncIterator("INVITE"),
-        (payload, variables) => payload.invite.receiverId === variables.userId
+        (_, __, { pubsub }) => pubsub.asyncIterator("INVITE"),
+        (parent, _, context) => {
+          const { id: userId } = checkAuthWs(context);
+          return parent.invite.receiverId === userId;
+        }
       ),
     },
   },

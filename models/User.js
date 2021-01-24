@@ -33,12 +33,6 @@ const userSchema = new Schema({
       ref: "User",
     },
   ],
-  chats: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: "Chat",
-    },
-  ],
 });
 
 module.exports = model("User", userSchema);

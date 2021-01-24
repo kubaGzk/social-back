@@ -4,9 +4,11 @@ const {
   AuthenticationError,
   withFilter,
 } = require("apollo-server");
+const mongoose = require("mongoose");
+
 const Chat = require("../../models/Chat");
 const checkAuth = require("../../util/check-auth");
-const mongoose = require("mongoose");
+const checkAuthWs = require("../../util/check-auth-ws");
 
 module.exports = {
   Query: {
@@ -36,12 +38,14 @@ module.exports = {
 
       let chats = [];
       try {
-        chats = await Chat.find({ users: { $elemMatch: { userId } } })
+        chats = await Chat.find({ users: { $all: [userId] } })
           .populate("users", "firstname lastname image")
           .exec();
       } catch (err) {
         throw new ApolloError(err);
       }
+
+      console.log(chats);
 
       return chats;
     },
@@ -105,6 +109,10 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
+      if (chat.users.findIndex((us) => us.id === userId) < 0) {
+        throw new AuthenticationError("You are not allowed to read this chat");
+      }
+
       if (chat.writing.findIndex((w) => w.toString() === userId) < 0) {
         chat.writing = [...chat.writing, userId];
       }
@@ -135,6 +143,10 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
+      if (chat.users.findIndex((us) => us.id === userId) < 0) {
+        throw new AuthenticationError("You are not allowed to read this chat");
+      }
+
       chat.writing = chat.writing.filter((w) => w.toString() !== userId);
 
       try {
@@ -160,6 +172,10 @@ module.exports = {
 
       if (!chat) {
         throw new UserInputError("Cannot find chat for provided ID.");
+      }
+
+      if (chat.users.findIndex((us) => us.id === userId) < 0) {
+        throw new AuthenticationError("You are not allowed to read this chat");
       }
 
       chat.messages = [
@@ -197,8 +213,15 @@ module.exports = {
         throw new UserInputError("Cannot find chat for provided ID.");
       }
 
+      if (chat.users.findIndex((us) => us.id === userId) < 0) {
+        throw new AuthenticationError("You are not allowed to read this chat");
+      }
+
       chat.messages = chat.messages.map((msg) => {
-        if (messageIds.indexOf(msg.id.toISOString()) >= 0) {
+        if (
+          messageIds.indexOf(msg.id.toString()) >= 0 &&
+          msg.read.indexOf(userId) < 0
+        ) {
           msg.read.push(userId);
         }
         return msg;
@@ -219,19 +242,23 @@ module.exports = {
     newChat: {
       subscribe: withFilter(
         (_, data, { pubsub }) => pubsub.asyncIterator("NEW_CHAT"),
-        (payload, variables) =>
-          payload.newChat.users.findIndex(
-            (usr) => usr.id === variables.userId
-          ) >= 0
+        (parent, _, context) => {
+          const { id: userId } = checkAuthWs(context);
+          return (
+            parent.newChat.users.findIndex((usr) => usr.id === userId) >= 0
+          );
+        }
       ),
     },
     chatChange: {
       subscribe: withFilter(
         (_, data, { pubsub }) => pubsub.asyncIterator("CHAT_CHANGE"),
-        (payload, variables) =>
-          payload.chatChange.users.findIndex(
-            (usr) => usr.id === variables.userId
-          ) >= 0
+        (parent, _, context) => {
+          const { id: userId } = checkAuthWs(context);
+          return (
+            parent.chatChange.users.findIndex((usr) => usr.id === userId) >= 0
+          );
+        }
       ),
     },
   },
