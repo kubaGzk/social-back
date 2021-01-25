@@ -45,8 +45,6 @@ module.exports = {
         throw new ApolloError(err);
       }
 
-      console.log(chats);
-
       return chats;
     },
   },

@@ -1,4 +1,4 @@
-const { UserInputError, withFilter } = require("apollo-server");
+const { UserInputError, withFilter, ApolloError } = require("apollo-server");
 const mongoose = require("mongoose");
 
 const User = require("../../models/User");
@@ -91,11 +91,6 @@ module.exports = {
           if (!chat) {
             chat = new Chat({ users: [requestUser.id, receiveUser.id] });
             await chat.save({ session: sess });
-
-            chat = await Chat.findById(chat.id)
-              .populate("users", "firstname lastname image")
-              .exec();
-
             chatExist = false;
           }
 
@@ -107,10 +102,18 @@ module.exports = {
           throw new Error(err);
         }
 
-        !chatExist &&
+        if (!chatExist) {
+          try {
+            chat = await Chat.findById(chat.id)
+              .populate("users", "firstname lastname image")
+              .exec();
+          } catch (err) {
+            throw new ApolloError(err);
+          }
           context.pubsub.publish("NEW_CHAT", {
             newChat: chat,
           });
+        }
 
         context.pubsub.publish("INVITE", {
           invite: {
@@ -198,10 +201,6 @@ module.exports = {
         if (!chat) {
           chat = new Chat({ users: [requestUser.id, receiveUser.id] });
           await chat.save({ session: sess });
-
-          chat = await Chat.findById(chat.id)
-            .populate("users", "firstname lastname image")
-            .exec();
           chatExist = false;
         }
 
@@ -213,10 +212,18 @@ module.exports = {
         throw new Error(err);
       }
 
-      !chatExist &&
+      if (!chatExist) {
+        try {
+          chat = await Chat.findById(chat.id)
+            .populate("users", "firstname lastname image")
+            .exec();
+        } catch (err) {
+          throw new ApolloError(err);
+        }
         context.pubsub.publish("NEW_CHAT", {
           newChat: chat,
         });
+      }
 
       context.pubsub.publish("INVITE", {
         invite: {
