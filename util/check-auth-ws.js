@@ -12,7 +12,7 @@ module.exports = (context) => {
         const user = jwt.verify(token, SECRET_KEY);
         return user;
       } catch (err) {
-        throw new AuthenticationError("Invalid/Expired token");
+        throw new AuthenticationError("Invalid/Expired token - WebSocket");
       }
     }
     throw new Error("Authentication token must be 'Bearer [token]'");

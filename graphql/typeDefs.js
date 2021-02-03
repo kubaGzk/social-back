@@ -125,7 +125,7 @@ module.exports = gql`
     users: [UserInfoSimple!]
     messages: [Message]
     writing: [ID]
-    unread: Int!
+    unread: [ID!]
   }
 
   type Query {
@@ -159,7 +159,7 @@ module.exports = gql`
     declineInvite(requestor: ID!): String!
     createChat(users: [ID!]): Chat!
     startWriting(chatId: ID!): Chat!
-    endWriting(chatId: ID!): Chat!
+    endWriting(chatId: ID!): Chat
     writeMessage(chatId: ID!, body: String!): Chat!
     readMessage(chatId: ID!, messageIds: [ID!]): Chat!
   }

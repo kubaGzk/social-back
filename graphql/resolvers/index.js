@@ -31,12 +31,14 @@ module.exports = {
         userId = checkAuth(context).id;
       }
 
-      return parent.messages.reduce((acc, msg) => {
+      const unread = parent.messages.reduce((acc, msg) => {
         if (msg.read.indexOf(userId) < 0) {
-          acc += 1;
+          acc.push(msg.id);
         }
         return acc;
-      }, 0);
+      }, []);
+
+      return unread;
     },
   },
 
