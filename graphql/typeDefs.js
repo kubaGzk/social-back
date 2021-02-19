@@ -127,6 +127,10 @@ module.exports = gql`
     writing: [ID]
     unread: [ID!]
   }
+  type InviteResponse {
+    message: String!
+    inviteId: ID!
+  }
 
   type Query {
     getPosts(offset: Int, userId: ID): [Post]
@@ -154,9 +158,9 @@ module.exports = gql`
     createComment(postId: ID!, body: String!): Post!
     deleteComment(postId: ID!, commentId: ID!): Post!
     likePost(postId: ID!): Post!
-    createInvite(receiver: ID!): String!
-    confirmInvite(requestor: ID!): String!
-    declineInvite(requestor: ID!): String!
+    createInvite(receiver: ID!): InviteResponse!
+    confirmInvite(requestor: ID!): InviteResponse!
+    declineInvite(requestor: ID!): InviteResponse!
     createChat(users: [ID!]): Chat!
     startWriting(chatId: ID!): Chat!
     endWriting(chatId: ID!): Chat

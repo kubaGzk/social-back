@@ -126,7 +126,7 @@ module.exports = {
           },
         });
 
-        return "Invitation has been accepted.";
+        return { message: "Invitation has been accepted.", inviteId: receiver };
       }
 
       try {
@@ -155,7 +155,7 @@ module.exports = {
         },
       });
 
-      return "Invitation has been sent.";
+      return { message: "Invitation has been sent.", inviteId: "" };
     },
     confirmInvite: async (_, { requestor }, context) => {
       const { id: receiver } = checkAuth(context);
@@ -236,7 +236,7 @@ module.exports = {
         },
       });
 
-      return "Invitation has been accepted.";
+      return { message: "Invitation has been accepted.", inviteId: requestor };
     },
     declineInvite: async (_, { requestor }, context) => {
       const { id: receiver } = checkAuth(context);
@@ -273,7 +273,7 @@ module.exports = {
         throw new Error(err);
       }
 
-      return "Invitation has been declined";
+      return { message: "Invitation has been declined.", inviteId: requestor };
     },
   },
   Subscription: {
